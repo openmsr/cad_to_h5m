@@ -9,7 +9,7 @@ class FilesWithTags(TypedDict, total=False):
     filename: str
     material_tag: str
     tet_mesh: str
-    scale: float
+    transforms: dict
 
 
 def cad_to_h5m(
@@ -25,23 +25,31 @@ def cad_to_h5m(
     surface_reflectivity_name: str = "reflective",
     exo_filename: Optional[str] = None,
     implicit_complement_material_tag: Optional[str] = None,
-    verbose: bool = True
+    verbose: bool = True,
+    graveyard = None
 ):
     """Converts a CAD files in STP or SAT format into a h5m file for use in
     DAGMC simulations. The h5m file contains material tags associated with the
     CAD files.
 
     files_with_tags: The file names of the input CAD files with associated
-        materials tags in the form of a list of dictionaries were each
+        materials tags in the form of a list of dictionaries where each
         dictionary has a "cad_filename" and "material_tag" key. For example
         [{"material_tag": "mat1", "cad_filename": "part1.stp"}, {"material_tag":
         "mat2", "cad_filename": "part2.stp"}]. There is also an option to create
         a tet mesh of entries by including a "tet_mesh" key in the dictionary.
         The value is passed to the Cubit mesh command. An example entry would be
-        "tet_mesh": "size 0.5". The scale key can also be included to scale up
-        or down the geometry so that it is in cm units as required by most
-        particle transport codes. And example entry would be "scale": 10 which
-        would make the geometry 10 times bigger.
+        "tet_mesh": "size 0.5". A transforms dict can also be included to apply
+        transforms to the volumes to be exported. Currently, only scale and move
+        are supported. A 'scale' key takes a float as a value and offers the
+        option to scale up or down the geometry so that it is in cm units as
+        required by most particle transport codes. An example entry would be
+        "transforms":{"scale": 10} which would make the geometry 10 times
+        bigger. A "move" key takes as its value an iterable of three floats
+        corresponding to translations in the x, y and z directions respectively.
+        An example entry could be "transforms":{"scale": 10,"move":[0,0,10]}
+        which makes the geometry 10 times bigger and moves it 10 units in the +z
+        direction.
     h5m_filename: the file name of the output h5m file which is suitable for
         use in DAGMC enabled particle transport codes.
     cubit_filename: the file name of the output cubit file. Should end with .cub
@@ -67,6 +75,11 @@ def cad_to_h5m(
         in OpenMC and MCNP.
     implicit_complement_material_tag: Material tag to be assigned to the
         implicit complement. Defaults to vacuum.
+    graveyard: Side length of graveyard volume to be generated as a thin, hollow
+        cube. Two concentric cubes, one of the provided side length, another
+        five units greater than the provided side length, are generated. The
+        space between the inner wall of the outer cube and the outer wall of the
+        inner cube is defined as the graveyard volume.
     """
 
     if h5m_filename is None or Path(h5m_filename).suffix == ".h5m":
@@ -166,11 +179,23 @@ def create_tet_mesh(geometry_details, cubit):
                 cubit.cmd("mesh volume " + str(volume))
 
 
-def scale_geometry(geometry_details: dict, cubit):
+def apply_transforms(cubit, geometry_details):
     for entry in geometry_details:
-        if 'scale' in entry.keys():
-            cubit.cmd(
-                f'volume {" ".join(entry["volumes"])}  scale  {entry["scale"]}')
+        if 'transforms' in entry.keys():
+            for transform in entry['transforms'].keys():
+                if transform == 'scale':
+                    scale_geometry(cubit, entry)
+                if transform == 'move':
+                    move_volume(cubit,entry)
+
+def scale_geometry(cubit, entry):
+    cubit.cmd(
+        f'volume {" ".join(entry["volumes"])}  scale  {entry["transforms"]["scale"]}')
+
+def move_volume(cubit, entry):
+    translation = list(map(str,entry["transforms"]["move"]))
+    cubit.cmd(
+        f'volume {" ".join(entry["volumes"])}  move  {" ".join(translation)}')
 
 # TODO implent a flag to allow tet file info to be saved
 # def save_tet_details_to_json_file(
@@ -343,8 +368,33 @@ def tag_geometry_with_mats(
         else:
             msg = f"dictionary key material_tag is missing for {entry}"
             raise ValueError(msg)
+            
+    if graveyard is not None:
+        final_vol_number = int(geometry_details[-1]['volumes'][-1])
+        inner = final_vol_number + 1
+        outer = final_vol_number + 2
+        graveyard_volume_number = final_vol_number + 3
+        cubit.cmd("create brick x " + str(graveyard))
+        cubit.cmd("create brick x " + str(graveyard+5))
+        cubit.cmd("subtract vol "
+                + str(inner)
+                + "from vol "
+                + str(outer)
+                )
+        cubit.cmd(
+            'group "mat:'
+            + "Graveyard"
+            + '" add volume '
+            + str(graveyard_volume_number)
+            )
 
+            #check for implicit complement again
+        if implicit_complement_material_tag is not None:
+            cubit.cmd(
+f'group "mat:{implicit_complement_material_tag}_comp" add vol {graveyard_volume_number}'
+                )
 
+            
 def find_number_of_volumes_in_each_step_file(files_with_tags, cubit, verbose):
     """ """
     for entry in files_with_tags:
