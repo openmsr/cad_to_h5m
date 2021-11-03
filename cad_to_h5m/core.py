@@ -128,11 +128,11 @@ def cad_to_h5m(
 
     geometry_details, total_number_of_volumes = find_number_of_volumes_in_each_step_file(
         files_with_tags, cubit, verbose)
-    
+
     apply_transforms(cubit, geometry_details)
     
     tag_geometry_with_mats(
-        geometry_details, implicit_complement_material_tag, cubit
+        geometry_details, implicit_complement_material_tag, cubit, graveyard
     )
 
     if imprint and total_number_of_volumes > 1:
@@ -342,7 +342,7 @@ def find_reflecting_surfaces_of_reflecting_wedge(
 
 
 def tag_geometry_with_mats(
-    geometry_details, implicit_complement_material_tag, cubit
+    geometry_details, implicit_complement_material_tag, cubit, graveyard
 ):
     for entry in geometry_details:
         if "material_tag" in entry.keys():
@@ -456,3 +456,4 @@ def find_number_of_volumes_in_each_step_file(files_with_tags, cubit, verbose):
     # cubit.cmd("autoheal analyze vol all")
 
     return files_with_tags, sum(all_vols)
+
