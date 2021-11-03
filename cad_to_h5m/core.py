@@ -128,9 +128,9 @@ def cad_to_h5m(
 
     geometry_details, total_number_of_volumes = find_number_of_volumes_in_each_step_file(
         files_with_tags, cubit, verbose)
-
-    scale_geometry(geometry_details, cubit)
-
+    
+    apply_transforms(cubit, geometry_details)
+    
     tag_geometry_with_mats(
         geometry_details, implicit_complement_material_tag, cubit
     )
