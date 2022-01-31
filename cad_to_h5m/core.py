@@ -36,11 +36,14 @@ def cad_to_h5m(
         materials tags in the form of a list of dictionaries where each
         dictionary has a "cad_filename" and "material_tag" key. For example
         [{"material_tag": "mat1", "cad_filename": "part1.stp"}, {"material_tag":
-        "mat2", "cad_filename": "part2.stp"}]. There is also an option to create
-        a tet mesh of entries by including a "tet_mesh" key in the dictionary.
-        The value is passed to the Cubit mesh command. An example entry would be
-        "tet_mesh": "size 0.5". A transforms dict can also be included to apply
-        transforms to the volumes to be exported. Currently, only scale and move
+        "mat2", "cad_filename": "part2.stp"}]. If no "material_tag" key is
+        provided the material names are derived directly from CAD parts names,
+        that can be assigned directly in the CAE.
+        There is also an option to createa tet mesh of entries by including a
+        "tet_mesh" key in the dictionary.The value is passed to the Cubit mesh
+        command. An example entry would be "tet_mesh": "size 0.5".
+        A transforms dict can also be included to apply
+        transforms to the volumes to be exported. Scal, move and rotation
         are supported. A 'scale' key takes a float as a value and offers the
         option to scale up or down the geometry so that it is in cm units as
         required by most particle transport codes. An example entry would be
@@ -50,6 +53,12 @@ def cad_to_h5m(
         An example entry could be "transforms":{"scale": 10,"move":[0,0,10]}
         which makes the geometry 10 times bigger and moves it 10 units in the +z
         direction.
+        A "rotation" key takes as its value an iterable of seven floats
+        corresponding to a rotation angle, the origin coordinates ax x, y and z,
+        and the rotation vector in the x, y and z directions respectively.
+        An example entry could be "transforms":{"rotate":[180,0,0,0,0,0,1]},
+        which would rotate of 180 deg about the origin in the z-direction.
+
     h5m_filename: the file name of the output h5m file which is suitable for
         use in DAGMC enabled particle transport codes.
     cubit_filename: the file name of the output cubit file. Should end with .cub
@@ -130,7 +139,7 @@ def cad_to_h5m(
         files_with_tags, cubit, verbose)
 
     apply_transforms(cubit, geometry_details)
-    
+
     tag_geometry_with_mats(
         geometry_details, implicit_complement_material_tag, cubit, graveyard
     )
@@ -187,6 +196,8 @@ def apply_transforms(cubit, geometry_details):
                     scale_geometry(cubit, entry)
                 if transform == 'move':
                     move_volume(cubit,entry)
+                if transform == 'rotate':
+                    rotate_volume(cubit,entry)
 
 def scale_geometry(cubit, entry):
     cubit.cmd(
@@ -197,6 +208,13 @@ def move_volume(cubit, entry):
     cubit.cmd(
         f'volume {" ".join(entry["volumes"])}  move  {" ".join(translation)}')
 
+def rotate_volume(cubit, entry):
+    rotation_vector = list(map(str,entry["transforms"]["rotate"]))
+    rot_angle = rotation_vector[0]
+    origin = " ".join(rotation_vector[1:4])
+    direction = " ".join(rotation_vector[4:7])
+    cubit.cmd(
+        f'rotate volume {" ".join(entry["volumes"])}  angle {rot_angle} about origin {origin} direction {direction}')
 # TODO implent a flag to allow tet file info to be saved
 # def save_tet_details_to_json_file(
 #         geometry_details,
@@ -366,9 +384,18 @@ def tag_geometry_with_mats(
                         f'group "mat:{implicit_complement_material_tag}_comp" add vol {graveyard_volume_number}'
                     )
         else:
-            msg = f"dictionary key material_tag is missing for {entry}"
-            raise ValueError(msg)
-            
+            print(f'dictionary key material_tag is missing for {entry}')
+            print("getting material names directly from name IDs...")
+            for vol in entry["volumes"]:
+                mat_name = cubit.volume(int(vol)).entity_name().split('@')[0]
+                cubit.cmd(
+                    'group "mat:'
+                    + mat_name
+                    + '" add volume '
+                    + vol
+                )
+                volume_mat_list.append([[vol],mat_name])
+
     if graveyard is not None:
         final_vol_number = int(geometry_details[-1]['volumes'][-1])
         inner = final_vol_number + 1
@@ -394,7 +421,7 @@ def tag_geometry_with_mats(
 f'group "mat:{implicit_complement_material_tag}_comp" add vol {graveyard_volume_number}'
                 )
 
-            
+
 def find_number_of_volumes_in_each_step_file(files_with_tags, cubit, verbose):
     """ """
     for entry in files_with_tags:
@@ -424,7 +451,7 @@ def find_number_of_volumes_in_each_step_file(files_with_tags, cubit, verbose):
         all_vols = cubit.parse_cubit_list("volume", "all")
         new_vols = set(current_vols).symmetric_difference(set(all_vols))
         new_vols = list(map(str, new_vols))
-        if len(new_vols) > 1:
+        if "material_tag" in entry.keys() and len(new_vols) > 1:
             cubit.cmd(
                 "unite vol " +
                 " ".join(new_vols) +
@@ -456,4 +483,3 @@ def find_number_of_volumes_in_each_step_file(files_with_tags, cubit, verbose):
     # cubit.cmd("autoheal analyze vol all")
 
     return files_with_tags, sum(all_vols)
-
