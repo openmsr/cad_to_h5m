@@ -3,7 +3,7 @@ import os
 import json
 from typing import Dict, List, TypedDict, Optional
 from pathlib import Path
-
+import re
 
 class FilesWithTags(TypedDict, total=False):
     filename: str
@@ -390,7 +390,8 @@ def tag_geometry_with_mats(
             print(f'dictionary key material_tag is missing for {entry}')
             print("getting material names directly from name IDs...")
             for vol in entry["volumes"]:
-                mat_name = cubit.volume(int(vol)).entity_name().split('@')[0]
+                g=re.match("^([^\s_@]+)",cubit.volume(int(vol)).entity_name())
+                mat_name=g[0]
                 cubit.cmd(
                     'group "mat:'
                     + mat_name
@@ -398,7 +399,6 @@ def tag_geometry_with_mats(
                     + vol
                 )
                 volume_mat_list.append([[vol],mat_name])
-
     if graveyard is not None:
         final_vol_number = int(geometry_details[-1]['volumes'][-1])
         inner = final_vol_number + 1
@@ -421,7 +421,7 @@ def tag_geometry_with_mats(
             #check for implicit complement again
         if implicit_complement_material_tag is not None:
             cubit.cmd(
-f'group "mat:{implicit_complement_material_tag}_comp" add vol {graveyard_volume_number}'
+                f'group "mat:{implicit_complement_material_tag}_comp" add vol {graveyard_volume_number}'
                 )
 
 
