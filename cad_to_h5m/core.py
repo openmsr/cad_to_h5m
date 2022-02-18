@@ -38,8 +38,10 @@ def cad_to_h5m(
         [{"material_tag": "mat1", "cad_filename": "part1.stp"}, {"material_tag":
         "mat2", "cad_filename": "part2.stp"}]. If no "material_tag" key is
         provided the material names are derived directly from CAD parts names,
-        that can be assigned directly in the CAE.
-        There is also an option to createa tet mesh of entries by including a
+        that can be assigned directly in the CAE. The material names are set to
+        be the initial part of the part name up to but not including either a '@'
+        , '_', or whitespace.
+        There is also an option to create a tet mesh of entries by including a
         "tet_mesh" key in the dictionary.The value is passed to the Cubit mesh
         command. An example entry would be "tet_mesh": "size 0.5".
         A transforms dict can also be included to apply
