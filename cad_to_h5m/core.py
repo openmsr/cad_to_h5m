@@ -362,6 +362,7 @@ def find_reflecting_surfaces_of_reflecting_wedge(
 def tag_geometry_with_mats(
     geometry_details, implicit_complement_material_tag, cubit, graveyard
 ):
+    volume_mat_list = []
     for entry in geometry_details:
         if "material_tag" in entry.keys():
 
@@ -377,6 +378,8 @@ def tag_geometry_with_mats(
                 + '" add volume '
                 + " ".join(entry["volumes"])
             )
+            volume_mat_list.append([entry["volumes"],entry["material_tag"]])
+
             if entry['material_tag'].lower() == 'graveyard':
                 if implicit_complement_material_tag is not None:
                     graveyard_volume_number = entry["volumes"][0]
