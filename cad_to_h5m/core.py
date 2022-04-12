@@ -379,11 +379,7 @@ def tag_geometry_with_mats(
                 + " ".join(entry["volumes"])
             )
             volume_mat_list.append([entry["volumes"],entry["material_tag"]])
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> 853837b87510b5458c606ddb74daac49c554a994
             if entry['material_tag'].lower() == 'graveyard':
                 if implicit_complement_material_tag is not None:
                     graveyard_volume_number = entry["volumes"][0]
