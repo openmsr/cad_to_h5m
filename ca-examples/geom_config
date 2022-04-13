@@ -1,0 +1,8 @@
+sim_folder=tesselated_core_lake_b21_v1_wcsg_1e-2
+bare_min_geom=tesselated_core_lake_b21_v1_wcsg
+operating_temperature=977
+expansion_coefficient=15.8e-6
+scale_dimension=100.0
+scale_thermal=False
+faceting_tolerance=1e-2
+geom_shift=0,0,0
