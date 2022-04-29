@@ -48,11 +48,14 @@ def cad_to_h5m(
         option to scale up or down the geometry so that it is in cm units as
         required by most particle transport codes. An example entry would be
         "transforms":{"scale": 10} which would make the geometry 10 times
-        bigger. A "move" key takes as its value an iterable of three floats
+        bigger. A "move" key takes as its value a either a tuple containing the 
+        volumes to move (defaults to all ), and a list of three floats
         corresponding to translations in the x, y and z directions respectively.
         An example entry could be "transforms":{"scale": 10,"move":[0,0,10]}
         which makes the geometry 10 times bigger and moves it 10 units in the +z
-        direction.
+        direction. Similarly, "transforms":{"scale": 10,"move":([3,7],[0,0,10])}
+        would make the geometry 10 times bigger, but only move volumes 3 & 7 
+        10 units in the +z direction. Volume IDs can be found through cubit GUI.
         A "rotation" key takes as its value an iterable of seven floats
         corresponding to a rotation angle, the origin coordinates ax x, y and z,
         and the rotation vector in the x, y and z directions respectively.
@@ -204,9 +207,12 @@ def scale_geometry(cubit, entry):
         f'volume {" ".join(entry["volumes"])}  scale  {entry["transforms"]["scale"]}')
 
 def move_volume(cubit, entry):
-    translation = list(map(str,entry["transforms"]["move"]))
-    cubit.cmd(
-        f'volume {" ".join(entry["volumes"])}  move  {" ".join(translation)}')
+    if isinstance(entry["transforms"]["move"],tuple):
+        translation = list(map(str,entry["transforms"]["move"][1]))
+        cubit.cmd(f'volume {" ".join(entry["volumes"]["move"][0])}  move  {" ".join(translation)}')
+    else:
+        translation = list(map(str,entry["transforms"]["move"]))
+        cubit.cmd(f'volume {" ".join(entry["volumes"])}  move  {" ".join(translation)}')
 
 def rotate_volume(cubit, entry):
     rotation_vector = list(map(str,entry["transforms"]["rotate"]))

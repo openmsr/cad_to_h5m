@@ -1,4 +1,4 @@
-# This Dockerfile creates an enviroment / dependancies needed to run the 
+# This Dockerfile creates an enviroment / dependancies needed to run the
 # cad_to_h5m package.
 
 # You will need to have you license file saved as license.lic in the same folder
@@ -11,7 +11,7 @@
 # docker run -it cad_to_h5m
 
 # docker image contains python 3.8 as default
-FROM continuumio/miniconda3:4.9.2 as dependencies
+FROM continuumio/miniconda3:latest as dependencies
 
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 \
@@ -35,17 +35,17 @@ RUN apt-get install -y libgl1-mesa-glx \
 
 
 # install cubit dependencies
-RUN apt-get install -y libx11-6 
-RUN apt-get install -y libxt6 
+RUN apt-get install -y libx11-6
+RUN apt-get install -y libxt6
 RUN apt-get install -y libgl1
 RUN apt-get install -y libglu1-mesa
 RUN apt-get install -y libgl1-mesa-glx
-RUN apt-get install -y libxcb-icccm4 
-RUN apt-get install -y libxcb-image0 
-RUN apt-get install -y libxcb-keysyms1 
-RUN apt-get install -y libxcb-render-util0 
-RUN apt-get install -y libxkbcommon-x11-0 
-RUN apt-get install -y libxcb-randr0 
+RUN apt-get install -y libxcb-icccm4
+RUN apt-get install -y libxcb-image0
+RUN apt-get install -y libxcb-keysyms1
+RUN apt-get install -y libxcb-render-util0
+RUN apt-get install -y libxkbcommon-x11-0
+RUN apt-get install -y libxcb-randr0
 RUN apt-get install -y libxcb-xinerama0
 
 
@@ -84,4 +84,3 @@ COPY tests tests/
 COPY examples/*.py examples/
 
 RUN python setup.py install
-
