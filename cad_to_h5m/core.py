@@ -54,7 +54,13 @@ def cad_to_h5m(
         An example entry could be "transforms":{"scale": 10,"move":[0,0,10]}
         which makes the geometry 10 times bigger and moves it 10 units in the +z
         direction. Similarly, "transforms":{"scale": 10,"move":([3,7],[0,0,10])}
-        would make the geometry 10 times bigger, but only move volumes 3 & 7 
+        would make the geometry 10 times bigger, but only move volumes 3 & 7.
+        Additionally, if more than one movement is specified, each volume can
+        move separately (as long as number of movements is equal to the number of
+        volumes given). For example, 
+        "transforms":{"scale": 10,"move":([3,7],[[0,0,10],[0,0,-10]])} would
+        again make the geometry 10 times bigger, but now would move volume 3
+        10 units in the +z direction, and volume 7 10 units in the -z direction.
         10 units in the +z direction. Volume IDs can be found through cubit GUI.
         A "rotation" key takes as its value an iterable of seven floats
         corresponding to a rotation angle, the origin coordinates ax x, y and z,
@@ -208,8 +214,13 @@ def scale_geometry(cubit, entry):
 
 def move_volume(cubit, entry):
     if isinstance(entry["transforms"]["move"],tuple):
-        translation = list(map(str,entry["transforms"]["move"][1]))
-        cubit.cmd(f'volume {" ".join(entry["volumes"]["move"][0])}  move  {" ".join(translation)}')
+        if isinstance(entry["transforms"]["move"][1][0],list):
+            for vol, mov in enumerate(entry["transforms"]["move"][1]):
+                translation = list(map(str,mov))
+                cubit.cmd(f'volume {entry["transforms"]["move"][0][vol]}  move  {" ".join(translation)}')
+        else:
+            translation = list(map(str,entry["transforms"]["move"][1]))
+            cubit.cmd(f'volume {" ".join(entry["transforms"]["move"][0])}  move  {" ".join(translation)}')
     else:
         translation = list(map(str,entry["transforms"]["move"]))
         cubit.cmd(f'volume {" ".join(entry["volumes"])}  move  {" ".join(translation)}')
