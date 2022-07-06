@@ -48,7 +48,7 @@ def cad_to_h5m(
         option to scale up or down the geometry so that it is in cm units as
         required by most particle transport codes. An example entry would be
         "transforms":{"scale": 10} which would make the geometry 10 times
-        bigger. A "move" key takes as its value a either a tuple containing the 
+        bigger. A "move" key takes as its value a either a tuple containing the
         volumes to move (defaults to all ), and a list of three floats
         corresponding to translations in the x, y and z directions respectively.
         An example entry could be "transforms":{"scale": 10,"move":[0,0,10]}
@@ -57,7 +57,7 @@ def cad_to_h5m(
         would make the geometry 10 times bigger, but only move volumes 3 & 7.
         Additionally, if more than one movement is specified, each volume can
         move separately (as long as number of movements is equal to the number of
-        volumes given). For example, 
+        volumes given). For example,
         "transforms":{"scale": 10,"move":([3,7],[[0,0,10],[0,0,-10]])} would
         again make the geometry 10 times bigger, but now would move volume 3
         10 units in the +z direction, and volume 7 10 units in the -z direction.
@@ -201,12 +201,13 @@ def apply_transforms(cubit, geometry_details):
     for entry in geometry_details:
         if 'transforms' in entry.keys():
             for transform in entry['transforms'].keys():
-                if transform == 'scale':
-                    scale_geometry(cubit, entry)
                 if transform == 'move':
                     move_volume(cubit,entry)
+                if transform == 'scale':
+                    scale_geometry(cubit, entry)
                 if transform == 'rotate':
                     rotate_volume(cubit,entry)
+    cubit.cmd("healer autoheal vol all")
 
 def scale_geometry(cubit, entry):
     cubit.cmd(
@@ -219,8 +220,9 @@ def move_volume(cubit, entry):
                 translation = list(map(str,mov))
                 cubit.cmd(f'volume {entry["transforms"]["move"][0][vol]}  move  {" ".join(translation)}')
         else:
+            vols = list(map(str,entry["transforms"]["move"][0]))
             translation = list(map(str,entry["transforms"]["move"][1]))
-            cubit.cmd(f'volume {" ".join(entry["transforms"]["move"][0])}  move  {" ".join(translation)}')
+            cubit.cmd(f'volume {" ".join(vols)}  move  {" ".join(translation)}')
     else:
         translation = list(map(str,entry["transforms"]["move"]))
         cubit.cmd(f'volume {" ".join(entry["volumes"])}  move  {" ".join(translation)}')
@@ -468,6 +470,7 @@ def find_number_of_volumes_in_each_step_file(files_with_tags, cubit, verbose):
             + entry["cad_filename"]
             + '" separate_bodies no_surfaces no_curves no_vertices '
         )
+        cubit.cmd("healer autoheal vol all")
         all_vols = cubit.parse_cubit_list("volume", "all")
         new_vols = set(current_vols).symmetric_difference(set(all_vols))
         new_vols = list(map(str, new_vols))
